@@ -1,27 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 
 using Windows.Devices.Enumeration;
 using Windows.Devices.Midi;
 using System.Threading.Tasks;
 using Windows.UI.Core;
-using Windows.ApplicationModel.UserActivities;
 using System.Threading;
 using System.Text;
 using Windows.Storage.Streams;
 using Windows.UI.ViewManagement;
+using Windows.ApplicationModel.ExtendedExecution;
+using System.Threading;
 
 
 
@@ -38,14 +30,20 @@ namespace FootCtrl
     public sealed partial class MainPage : Page
     {
 
+
         MidiDeviceWatcher midiInDeviceWatcher;
         MidiDeviceWatcher outputDeviceWatcher;
         MidiInPort midiInPort1;
         MidiInPort midiInPort2;
         MidiInPort midiInPort3;
 
+        private ExtendedExecutionSession session = null;
+        private System.Threading.Timer periodicTimer = null;
+
         IMidiOutPort midiOutPort;
         public static TeVirtualMIDI port;
+
+
 
         public enum NotifyType
         {
@@ -204,17 +202,6 @@ namespace FootCtrl
                         {
                              ConnectFoot1(deviceInfo);
 
-                            //<midiInPort1 = await MidiInPort.FromIdAsync(deviceInfo.Id);
-                            //if (midiInPort1 == null)
-                            //{
-                            //    System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort from input device");
-
-                            //}
-                            //else
-                            //{
-                            //    this.midiInPortListBox.Items.Add(deviceInfo.Name);
-                            //    midiInPort1.MessageReceived += MidiInPort_MessageReceived;
-                            //}
                         }
                         catch
                         {
@@ -236,15 +223,6 @@ namespace FootCtrl
                                 System.Diagnostics.Debug.WriteLine("Execpion on midiInPort1");
                             }
 
-                            //if (midiInPort2 == null)
-                            //{
-                            //    System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort2 from input device");
-                            //}
-                            //else
-                            //{
-                            //    this.midiInPortListBox.Items.Add(deviceInfo.Name);
-                            //    midiInPort2.MessageReceived += MidiInPort_MessageReceived;
-                            //}
                         }
                     }
                     catch
@@ -259,17 +237,6 @@ namespace FootCtrl
                              ConnectFoot3(deviceInfo);
                         }
 
-                        //    midiInPort3 = await MidiInPort.FromIdAsync(deviceInfo.Id);
-                        //    if (midiInPort3 == null)
-                        //    {
-                        //        System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort2 from input device");
-                        //    }
-                        //    else
-                        //    {
-                        //        this.midiInPortListBox.Items.Add(deviceInfo.Name);
-                        //        midiInPort3.MessageReceived += MidiInPort_MessageReceived;
-                        //    }
-                        //}
                         catch
                         {
                             System.Diagnostics.Debug.WriteLine("Execpion on midiInPort2");
@@ -331,7 +298,55 @@ namespace FootCtrl
               EnumerateMidiOutputDevices();
 
         }
-  
+
+
+        private async void SessionRevoked(object sender, ExtendedExecutionRevokedEventArgs args)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                switch (args.Reason)
+                {
+                    case ExtendedExecutionRevokedReason.Resumed:
+                        NotifyUser("Extended execution revoked due to returning to foreground.", NotifyType.Green);
+                        break;
+
+                    case ExtendedExecutionRevokedReason.SystemPolicy:
+                        NotifyUser("Extended execution revoked due to system policy.", NotifyType.Green);
+                        break;
+                }
+
+                //EndExtendedExecution();
+            });
+        }
+        private async void BeginExtendedExecution()
+        {
+            // The previous Extended Execution must be closed before a new one can be requested.
+            // This code is redundant here because the sample doesn't allow a new extended
+            // execution to begin until the previous one ends, but we leave it here for illustration.
+            //ClearExtendedExecution();
+
+            var newSession = new ExtendedExecutionSession();
+            newSession.Reason = ExtendedExecutionReason.Unspecified;
+            newSession.Description = "Raising periodic toasts";
+            newSession.Revoked += SessionRevoked;
+            ExtendedExecutionResult result = await newSession.RequestExtensionAsync();
+
+            switch (result)
+            {
+                case ExtendedExecutionResult.Allowed:
+                    NotifyUser("Extended execution allowed.", NotifyType.Green);
+                    session = newSession;
+                    //periodicTimer = new System.Threading.Timer(OnTimer, DateTime.Now, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10));
+                    break;
+
+                default:
+                case ExtendedExecutionResult.Denied:
+                    NotifyUser("Extended execution denied.", NotifyType.Green);
+                    newSession.Dispose();
+                    break;
+            }
+            //UpdateUI();
+        }
 
         public  MainPage()
         {
@@ -341,6 +356,8 @@ namespace FootCtrl
 
             ApplicationView.PreferredLaunchViewSize = new Size(600, 400);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
+
+            BeginExtendedExecution();
 
 
             //this.midiInDeviceWatcher = new MidiDeviceWatcher(MidiInPort.GetDeviceSelector(), Dispatcher, null);
@@ -476,57 +493,7 @@ namespace FootCtrl
             }
         }
 
-        //private async void midiOutPortListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    var deviceInformationCollection = outputDeviceWatcher.DeviceInformationCollection;
 
-        //    if (deviceInformationCollection == null)
-        //    {
-        //        return;
-        //    }
-
-        //    DeviceInformation devInfo = deviceInformationCollection[midiOutPortListBox.SelectedIndex];
-
-        //    if (devInfo == null)
-        //    {
-        //        return;
-        //    }
-
-        //    midiOutPort = await MidiOutPort.FromIdAsync(devInfo.Id);
-
-        //    if (midiOutPort == null)
-        //    {
-        //        System.Diagnostics.Debug.WriteLine("Unable to create MidiOutPort from output device");
-        //        return;
-        //    }
-
-        //}
-
-       // private async void midiInPortListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-            //var deviceInformationCollection = inputDeviceWatcher.DeviceInformationCollection;
-
-            //if (deviceInformationCollection == null)
-            //{
-            //    return;
-            //}
-
-            //DeviceInformation devInfo = deviceInformationCollection[midiInPortListBox.SelectedIndex];
-
-            //if (devInfo == null)
-            //{
-            //    return;
-            //}
-
-            //midiInPort1 = await MidiInPort.FromIdAsync(devInfo.Id);
-
-            //if (midiInPort1 == null)
-            //{
-            //    System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort from input device");
-            //    return;
-            //}
-            //midiInPort1.MessageReceived += MidiInPort_MessageReceived;
-       // }
 
         
 
