@@ -9,100 +9,181 @@ using Windows.UI.Xaml.Controls;
 
 namespace FootCtrl
 {
-    internal class MyMidiDeviceWatcher
+
+    internal class MidiDeviceWatcher
     {
-        DeviceWatcher deviceWatcher;
-        string deviceSelectorString;
-        ListBox deviceListBox;
-        CoreDispatcher coreDispatcher;
+        internal DeviceWatcher deviceWatcher = null;
+        internal DeviceInformationCollection deviceInformationCollection = null;
+        bool enumerationCompleted = false;
+        ListBox portList = null;
+        string midiSelector = string.Empty;
+        CoreDispatcher coreDispatcher = null;
 
-        public DeviceInformationCollection DeviceInformationCollection { get; set; }
-
-        public MyMidiDeviceWatcher(string midiDeviceSelectorString, ListBox midiDeviceListBox, CoreDispatcher dispatcher)
+        /// <summary>
+        /// Constructor: Initialize and hook up Device Watcher events
+        /// </summary>
+        /// <param name="midiSelectorString">MIDI Device Selector</param>
+        /// <param name="dispatcher">CoreDispatcher instance, to update UI thread</param>
+        /// <param name="portListBox">The UI element to update with list of devices</param>
+        internal MidiDeviceWatcher(string midiSelectorString, CoreDispatcher dispatcher, ListBox portListBox)
         {
-            deviceListBox = midiDeviceListBox;
-            coreDispatcher = dispatcher;
+            this.deviceWatcher = DeviceInformation.CreateWatcher(midiSelectorString);
+            this.portList = portListBox;
+            this.midiSelector = midiSelectorString;
+            this.coreDispatcher = dispatcher;
 
-            deviceSelectorString = midiDeviceSelectorString;
-
-            deviceWatcher = DeviceInformation.CreateWatcher(deviceSelectorString);
-            deviceWatcher.Added += DeviceWatcher_Added;
-            deviceWatcher.Removed += DeviceWatcher_Removed;
-            deviceWatcher.Updated += DeviceWatcher_Updated;
-            deviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
+            this.deviceWatcher.Added += DeviceWatcher_Added;
+            this.deviceWatcher.Removed += DeviceWatcher_Removed;
+            this.deviceWatcher.Updated += DeviceWatcher_Updated;
+            this.deviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
         }
 
-        private async void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate args)
+        /// <summary>
+        /// Destructor: Remove Device Watcher events
+        /// </summary>
+        ~MidiDeviceWatcher()
         {
-            await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+            this.deviceWatcher.Added -= DeviceWatcher_Added;
+            this.deviceWatcher.Removed -= DeviceWatcher_Removed;
+            this.deviceWatcher.Updated -= DeviceWatcher_Updated;
+            this.deviceWatcher.EnumerationCompleted -= DeviceWatcher_EnumerationCompleted;
+        }
+
+        /// <summary>
+        /// Start the Device Watcher
+        /// </summary>
+        internal void Start()
+        {
+            if (this.deviceWatcher.Status != DeviceWatcherStatus.Started)
             {
-                // Update the device list
-                UpdateDevices();
-            });
+                this.deviceWatcher.Start();
+            }
         }
 
-        private async void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation args)
+        /// <summary>
+        /// Stop the Device Watcher
+        /// </summary>
+        internal void Stop()
         {
-            await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+            if (this.deviceWatcher.Status != DeviceWatcherStatus.Stopped)
             {
-                // Update the device list
-                UpdateDevices();
-            });
+                this.deviceWatcher.Stop();
+            }
         }
 
-        private async void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object args)
+        /// <summary>
+        /// Get the DeviceInformationCollection
+        /// </summary>
+        /// <returns></returns>
+        internal DeviceInformationCollection GetDeviceInformationCollection()
         {
-            await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
-            {
-                // Update the device list
-                UpdateDevices();
-            });
+            return this.deviceInformationCollection;
         }
 
-        private async void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate args)
-        {
-            await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
-            {
-                // Update the device list
-                UpdateDevices();
-            });
-        }
-
+        /// <summary>
+        /// Add any connected MIDI devices to the list
+        /// </summary>
         private async void UpdateDevices()
         {
             // Get a list of all MIDI devices
-            this.DeviceInformationCollection = await DeviceInformation.FindAllAsync(deviceSelectorString);
+            this.deviceInformationCollection = await DeviceInformation.FindAllAsync(this.midiSelector);
 
-            deviceListBox.Items.Clear();
-
-            if (!this.DeviceInformationCollection.Any())
+            // If no devices are found, update the ListBox
+            if ((this.deviceInformationCollection == null) || (this.deviceInformationCollection.Count == 0))
             {
-                deviceListBox.Items.Add("No MIDI devices found!");
-            }
+                // Start with a clean list
+                this.portList.Items.Clear();
 
-            foreach (var deviceInformation in this.DeviceInformationCollection)
+                this.portList.Items.Add("No MIDI ports found");
+                this.portList.IsEnabled = false;
+            }
+            // If devices are found, enumerate them and add them to the list
+            else
             {
-                deviceListBox.Items.Add(deviceInformation.Name);
+                // Start with a clean list
+                if ( this.portList != null)
+                {
+                    this.portList.Items.Clear();
+
+                    foreach (var device in deviceInformationCollection)
+                    {
+                        this.portList.Items.Add(device.Name);
+                    }
+
+                    this.portList.IsEnabled = true;
+                }
+
             }
         }
 
-        public void StartWatcher()
+        /// <summary>
+        /// Update UI on device added
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation args)
         {
-            deviceWatcher.Start();
-        }
-        public void StopWatcher()
-        {
-            deviceWatcher.Stop();
+            // If all devices have been enumerated
+            if (this.enumerationCompleted)
+            {
+                await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+                    // Update the device list
+                    UpdateDevices();
+                });
+            }
         }
 
-        ~MyMidiDeviceWatcher()
+        /// <summary>
+        /// Update UI on device removed
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate args)
         {
-            deviceWatcher.Added -= DeviceWatcher_Added;
-            deviceWatcher.Removed -= DeviceWatcher_Removed;
-            deviceWatcher.Updated -= DeviceWatcher_Updated;
-            deviceWatcher.EnumerationCompleted -= DeviceWatcher_EnumerationCompleted;
-            deviceWatcher = null;
+            // If all devices have been enumerated
+            if (this.enumerationCompleted)
+            {
+                await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+                    // Update the device list
+                    UpdateDevices();
+                });
+            }
         }
-        
+
+        /// <summary>
+        /// Update UI on device updated
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate args)
+        {
+            // If all devices have been enumerated
+            if (this.enumerationCompleted)
+            {
+                await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+                    // Update the device list
+                    UpdateDevices();
+                });
+            }
+        }
+
+        /// <summary>
+        /// Update UI on device enumeration completed.
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object args)
+        {
+            this.enumerationCompleted = true;
+            await coreDispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+            {
+                // Update the device list
+                UpdateDevices();
+            });
+        }
     }
+
 }

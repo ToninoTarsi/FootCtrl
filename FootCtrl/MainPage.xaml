@@ -8,11 +8,11 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" 
     d:DesignHeight="400" 
-    d:DesignWidth="600"
+    d:DesignWidth="600" RequestedTheme="Dark"
     >
 
 
-    <RelativePanel Width="600" Height="400" >
+    <RelativePanel Width="600" Height="400" RequestedTheme="Dark" >
 
         <Border x:Name="StatusBorder" Margin="5,5,5,0">
             <ScrollViewer VerticalScrollMode="Auto"  VerticalScrollBarVisibility="Auto" MaxHeight="80">
@@ -25,8 +25,8 @@
         <TextBlock x:Name="StatusLabel1" Margin="120,55,0,10" TextWrapping="Wrap" Text="Input:" />
         <TextBlock x:Name="StatusLabel2" Margin="410,55,0,10" TextWrapping="Wrap" Text="Output:" />
 
-        <ListBox x:Name="midiInPortListBox" SelectionChanged="midiInPortListBox_SelectionChanged" Height="200" Width="290" Margin="5,80,0,0"/>
-        <ListBox x:Name="midiOutPortListBox" SelectionChanged="midiOutPortListBox_SelectionChanged" Height="200" Width="290" Margin="300,80,0,0" />
+        <ListBox x:Name="midiInPortListBox"  Height="200" Width="290" Margin="5,80,0,0" IsEnabled="False" RequestedTheme="Dark"/>
+        <ListBox x:Name="midiOutPortListBox"  Height="200" Width="290" Margin="300,80,0,0" IsEnabled="False" RequestedTheme="Dark" />
         
 
         <Button x:Name="Rescan" Content="Rescan" Margin="220,300,0,0" VerticalAlignment="Top" Height="73" Width="134" Click="Rescan_Click"/>
