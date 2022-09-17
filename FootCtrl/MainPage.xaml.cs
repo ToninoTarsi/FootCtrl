@@ -284,6 +284,7 @@ namespace FootCtrl
                         System.Diagnostics.Debug.WriteLine("Unable to create MidiOutPort from output device");
                         return;
                     }
+                    return;
                 }
             }
             this.midiOutPortListBox.IsEnabled = false;
