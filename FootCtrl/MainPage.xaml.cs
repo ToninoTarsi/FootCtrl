@@ -14,6 +14,8 @@ using Windows.Storage.Streams;
 using Windows.UI.ViewManagement;
 using Windows.ApplicationModel.ExtendedExecution;
 using System.Threading;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 
 
@@ -31,14 +33,20 @@ namespace FootCtrl
     {
 
 
-        MidiDeviceWatcher midiInDeviceWatcher;
-        MidiDeviceWatcher outputDeviceWatcher;
+        //MidiDeviceWatcher midiInDeviceWatcher;
+        //MidiDeviceWatcher outputDeviceWatcher;
         MidiInPort midiInPort1;
         MidiInPort midiInPort2;
         MidiInPort midiInPort3;
 
+        bool enumerationCompleted = false;
+        CoreDispatcher coreDispatcher = null;
+
+
+        private ObservableCollection<BluetoothLEDeviceDisplay> KnownDevices = new ObservableCollection<BluetoothLEDeviceDisplay>();
+
+
         private ExtendedExecutionSession session = null;
-        private System.Threading.Timer periodicTimer = null;
 
         IMidiOutPort midiOutPort;
         public static TeVirtualMIDI port;
@@ -79,7 +87,6 @@ namespace FootCtrl
 
             StatusBlock.Text = strMessage;
         }
-
 
         private async Task ConnectFoot1(DeviceInformation deviceInfo)
         {
@@ -355,14 +362,38 @@ namespace FootCtrl
 
             this.InitializeComponent();
 
+            KnownDevices.Clear();
+
             ApplicationView.PreferredLaunchViewSize = new Size(600, 400);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
 
             BeginExtendedExecution();
 
+            DeviceWatcher midiInDeviceWatcher = null;
 
-            //this.midiInDeviceWatcher = new MidiDeviceWatcher(MidiInPort.GetDeviceSelector(), Dispatcher, null);
-            //this.midiInDeviceWatcher.Start();
+
+            string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable" };
+            string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+
+
+            midiInDeviceWatcher =
+                    DeviceInformation.CreateWatcher(
+                        aqsAllBluetoothLEDevices,
+                        requestedProperties,
+                        DeviceInformationKind.AssociationEndpoint);
+
+
+
+
+            midiInDeviceWatcher.Added += DeviceWatcher_Added;
+            midiInDeviceWatcher.Removed += DeviceWatcher_Removed;
+            midiInDeviceWatcher.Updated += DeviceWatcher_Updated;
+            midiInDeviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
+
+            midiInDeviceWatcher.Start();
+
+
+
 
             RescanPorts();
 
@@ -501,6 +532,135 @@ namespace FootCtrl
         private void Rescan_Click(object sender, RoutedEventArgs e)
         {
             RescanPorts();
+        }
+
+
+        private async void UpdateDevices()
+        {
+            RescanPorts();
+
+        }
+
+        /// <summary>
+        /// Update UI on device added
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
+        {
+
+            Debug.WriteLine(String.Format("Added {0}{1}", deviceInfo.Id, deviceInfo.Name));
+
+            // If all devices have been enumerated
+            if (true)// enumerationCompleted)
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+                    // Update the device list
+
+                    if (FindBluetoothLEDeviceDisplay(deviceInfo.Id) == null)
+                    {
+                        if (deviceInfo.Name == "FootCtrl")
+                        {
+                            // If device has a friendly name display it immediately.
+                            KnownDevices.Add(new BluetoothLEDeviceDisplay(deviceInfo));
+                        }
+                    }
+
+
+                    //UpdateDevices();
+                });
+            }
+        }
+
+        /// <summary>
+        /// Update UI on device removed
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        {
+            // If all devices have been enumerated
+            if (this.enumerationCompleted)
+            {
+
+                Debug.WriteLine(String.Format("Removed {0}{1}", deviceInfoUpdate.Id, ""));
+
+                await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+
+                    BluetoothLEDeviceDisplay bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
+                    if (bleDeviceDisplay != null)
+                    {
+                        KnownDevices.Remove(bleDeviceDisplay);
+                    }
+                    // Update the device list
+                    //UpdateDevices();
+
+                });
+            }
+        }
+
+        /// <summary>
+        /// Update UI on device updated
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        {
+            Debug.WriteLine(String.Format("Updated {0}{1}", deviceInfoUpdate.Id, ""));
+
+            // If all devices have been enumerated
+            if (this.enumerationCompleted)
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+
+                    BluetoothLEDeviceDisplay bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
+                    if (bleDeviceDisplay != null)
+                    {
+                        // Device is already being displayed - update UX.
+                        bleDeviceDisplay.Update(deviceInfoUpdate);
+                        UpdateDevices();
+                        return;
+                    }
+                    // Update the device list
+
+                });
+            }
+        }
+
+        /// <summary>
+        /// Update UI on device enumeration completed.
+        /// </summary>
+        /// <param name="sender">The active DeviceWatcher instance</param>
+        /// <param name="args">Event arguments</param>
+        private async void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object e)
+        {
+
+            Debug.WriteLine($"{KnownDevices.Count} devices found. Enumeration completed.");
+
+
+            enumerationCompleted = true;
+            await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+            {
+
+                // Update the device list
+                //UpdateDevices();
+            });
+        }
+
+
+        private BluetoothLEDeviceDisplay FindBluetoothLEDeviceDisplay(string id)
+        {
+            foreach (BluetoothLEDeviceDisplay bleDeviceDisplay in KnownDevices)
+            {
+                if (bleDeviceDisplay.Id == id)
+                {
+                    return bleDeviceDisplay;
+                }
+            }
+            return null;
         }
     }
     
