@@ -7,6 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FootCtrl", "FootCtrl\FootCt
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E8F2D58-EECC-4C08-ACC0-00EE7E39E288}"
 	ProjectSection(SolutionItems) = preProject
+		FootCtrl\DisplayHelpers.cs = FootCtrl\DisplayHelpers.cs
 		FootCtrl\teVirtualMIDI.cs = FootCtrl\teVirtualMIDI.cs
 	EndProjectSection
 EndProject

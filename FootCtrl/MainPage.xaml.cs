@@ -16,6 +16,10 @@ using Windows.ApplicationModel.ExtendedExecution;
 using System.Threading;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Microsoft.VisualBasic;
+using System.Net;
+using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using Windows.Devices.Bluetooth;
 
 
 
@@ -32,6 +36,71 @@ namespace FootCtrl
     public sealed partial class MainPage : Page
     {
 
+        public ValueStopwatch stopwatch = ValueStopwatch.StartNew();
+       
+        public readonly struct ValueStopwatch
+        {
+            private static readonly double s_timestampToTicks = TimeSpan.TicksPerSecond / (double)Stopwatch.Frequency;
+
+            private readonly long _startTimestamp;
+
+            private ValueStopwatch(long startTimestamp) => _startTimestamp = startTimestamp;
+
+            public static ValueStopwatch StartNew() => new ValueStopwatch(GetTimestamp());
+
+            public static long GetTimestamp() => Stopwatch.GetTimestamp();
+
+            public static TimeSpan GetElapsedTime(long startTimestamp, long endTimestamp)
+            {
+                var timestampDelta = endTimestamp - startTimestamp;
+                var ticks = (long)(s_timestampToTicks * timestampDelta);
+                return new TimeSpan(ticks);
+            }
+
+            public TimeSpan GetElapsedTime() => GetElapsedTime(_startTimestamp, GetTimestamp());
+        }
+
+
+        /*private async Task   GetBattery(string deviceID)
+        {
+            var device = await BluetoothLEDevice.FromIdAsync(deviceID);
+
+            //get UUID of Services
+            var services = await device.GetGattServicesAsync();
+            if (services != null)
+            {
+                foreach (var servicesID in services.Services)
+                {
+
+                    //if there is a service thats same like the Battery Service
+                    if (servicesID.Uuid.ToString() == BluetoothBLE.Constants.BATTERY_SERVICE)
+                    {
+                        //updateServiceList is like a console logging in my tool
+                        updateServiceList($"Service: {servicesID.Uuid}");
+
+                        var characteristics = await servicesID.GetCharacteristicsAsync();
+                        foreach (var character in characteristics.Characteristics)
+                        {
+                            if (Constants.BATTERY_LEVEL == character.Uuid.ToString())
+                            {
+
+                                updateServiceList("C - UUID: " + character.Uuid.ToString());
+                                GattReadResult result = await character.ReadValueAsync();
+                                if (result.Status == GattCommunicationStatus.Success)
+                                {
+                                    var reader = DataReader.FromBuffer(result.Value);
+                                    byte[] input = new byte[reader.UnconsumedBufferLength];
+                                    reader.ReadBytes(input);
+                                    System.Diagnostics.Debug.WriteLine(BitConverter.ToString(input));
+
+                                }
+
+                            }
+                        }
+
+                    }
+                }
+            }*/
 
         //MidiDeviceWatcher midiInDeviceWatcher;
         //MidiDeviceWatcher outputDeviceWatcher;
@@ -90,7 +159,9 @@ namespace FootCtrl
 
         private async Task ConnectFoot1(DeviceInformation deviceInfo)
         {
-            System.Diagnostics.Debug.WriteLine("Connecting  midiInPort1 ...");
+            //Debug.WriteLine("Connecting  midiInPort1 ...");
+            Debug.WriteLine("Connecting  midiInPort1 ...");
+
 
             try
             {
@@ -105,20 +176,20 @@ namespace FootCtrl
                 {
                     this.midiInPortListBox.Items.Add(deviceInfo.Name);
                     midiInPort1.MessageReceived += MidiInPort_MessageReceived;
-                    System.Diagnostics.Debug.WriteLine("midiInPort1 Connected");
+                    Debug.WriteLine("midiInPort1 Connected");
 
                 }
             }
             catch
             {
-                System.Diagnostics.Debug.WriteLine("Execpion on midiInPort1");
+                Debug.WriteLine("Execpion on midiInPort1");
             }
         }
 
         private async Task ConnectFoot2(DeviceInformation deviceInfo)
         {
 
-            System.Diagnostics.Debug.WriteLine("Connecting  midiInPort2 ...");
+            Debug.WriteLine("Connecting  midiInPort2 ...");
 
             try
             {
@@ -126,26 +197,26 @@ namespace FootCtrl
                 midiInPort2 = await MidiInPort.FromIdAsync(deviceInfo.Id);
                 if (midiInPort2 == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort from input device");
+                    Debug.WriteLine("Unable to create MidiInPort from input device");
 
                 }
                 else
                 {
                     this.midiInPortListBox.Items.Add(deviceInfo.Name);
                     midiInPort2.MessageReceived += MidiInPort_MessageReceived;
-                    System.Diagnostics.Debug.WriteLine("midiInPort2 Connected");
+                    Debug.WriteLine("midiInPort2 Connected");
 
                 }
             }
             catch
             {
-                System.Diagnostics.Debug.WriteLine("Execpion on midiInPort2");
+                Debug.WriteLine("Execpion on midiInPort2");
             }
         }
 
         private async Task ConnectFoot3(DeviceInformation deviceInfo)
         {
-            System.Diagnostics.Debug.WriteLine("Connecting  midiInPort3 ...");
+            Debug.WriteLine("Connecting  midiInPort3 ...");
 
             try
             {
@@ -153,20 +224,20 @@ namespace FootCtrl
                 midiInPort3 = await MidiInPort.FromIdAsync(deviceInfo.Id);
                 if (midiInPort3 == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Unable to create MidiInPort from input device");
+                    Debug.WriteLine("Unable to create MidiInPort from input device");
 
                 }
                 else
                 {
                     this.midiInPortListBox.Items.Add(deviceInfo.Name);
                     midiInPort3.MessageReceived += MidiInPort_MessageReceived;
-                    System.Diagnostics.Debug.WriteLine("midiInPort3 Connected");
+                    Debug.WriteLine("midiInPort3 Connected");
 
                 }
             }
             catch
             {
-                System.Diagnostics.Debug.WriteLine("Execpion on midiInPort3");
+                Debug.WriteLine("Execpion on midiInPort3");
             }
         }
 
@@ -207,35 +278,35 @@ namespace FootCtrl
                     {
                         try
                         {
-                             ConnectFoot1(deviceInfo);
+                              ConnectFoot1(deviceInfo);
 
                         }
                         catch
                         {
-                            System.Diagnostics.Debug.WriteLine("Execpion on midiInPort1");
+                            //Debug.WriteLine("Execpion on midiInPort1");
+                            Debug.WriteLine("Execpion on midiInPort1");
+
                         }
 
                     }
 
-                    try
+  
+                    if (devNumber == 2)
                     {
-                        if (devNumber == 2)
+                        try
                         {
-                            try
-                            {
-                                 ConnectFoot2(deviceInfo);
-                            }
-                            catch
-                            {
-                                System.Diagnostics.Debug.WriteLine("Execpion on midiInPort1");
-                            }
+                             ConnectFoot2(deviceInfo);
+                        }
+                        catch
+                        {
+                            //Debug.WriteLine("Execpion on midiInPort1");
+                            Debug.WriteLine("Execpion on midiInPort2");
 
                         }
+
                     }
-                    catch
-                    {
-                        System.Diagnostics.Debug.WriteLine("Execpion on midiInPort2");
-                    }
+                    
+  
 
                     if (devNumber == 3)
                     {
@@ -246,7 +317,9 @@ namespace FootCtrl
 
                         catch
                         {
-                            System.Diagnostics.Debug.WriteLine("Execpion on midiInPort2");
+                            //Debug.WriteLine("Execpion on midiInPort2");
+                            Debug.WriteLine("Execpion on midiInPort3");
+
                         }
                     }
 
@@ -288,7 +361,7 @@ namespace FootCtrl
 
                     if (midiOutPort == null)
                     {
-                        System.Diagnostics.Debug.WriteLine("Unable to create MidiOutPort from output device");
+                        Debug.WriteLine("Unable to create MidiOutPort from output device");
                         return;
                     }
                     return;
@@ -302,8 +375,8 @@ namespace FootCtrl
 
         public  async Task  RescanPorts()
         {
-              EnumerateMidiInputDevices();
-              EnumerateMidiOutputDevices();
+            await EnumerateMidiInputDevices();
+            await EnumerateMidiOutputDevices();
 
         }
 
@@ -427,7 +500,7 @@ namespace FootCtrl
 
             midiOutPort.SendMessage(receivedMidiMessage);
 
-            System.Diagnostics.Debug.WriteLine(receivedMidiMessage.Timestamp.ToString());
+            Debug.WriteLine(receivedMidiMessage.Timestamp.ToString());
 
             StringBuilder outputMessage = new StringBuilder();
             outputMessage.Append(receivedMidiMessage.Timestamp.ToString()).Append(", Type: ").Append(receivedMidiMessage.Type);
@@ -519,9 +592,9 @@ namespace FootCtrl
 
             if (receivedMidiMessage.Type == MidiMessageType.NoteOn)
             {
-                System.Diagnostics.Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Channel);
-                System.Diagnostics.Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Note);
-                System.Diagnostics.Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Velocity);
+                Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Channel);
+                Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Note);
+                Debug.WriteLine(((MidiNoteOnMessage)receivedMidiMessage).Velocity);
             }
         }
 
@@ -537,6 +610,8 @@ namespace FootCtrl
 
         private async void UpdateDevices()
         {
+            Debug.WriteLine("Umpdating devices ...");
+
             RescanPorts();
 
         }
@@ -585,6 +660,7 @@ namespace FootCtrl
             {
 
                 Debug.WriteLine(String.Format("Removed {0}{1}", deviceInfoUpdate.Id, ""));
+                UpdateStatus("Done", NotifyType.Green);
 
                 await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
                 {
@@ -610,6 +686,7 @@ namespace FootCtrl
         {
             Debug.WriteLine(String.Format("Updated {0}{1}", deviceInfoUpdate.Id, ""));
 
+
             // If all devices have been enumerated
             if (this.enumerationCompleted)
             {
@@ -620,9 +697,18 @@ namespace FootCtrl
                     if (bleDeviceDisplay != null)
                     {
                         // Device is already being displayed - update UX.
-                        bleDeviceDisplay.Update(deviceInfoUpdate);
-                        UpdateDevices();
-                        return;
+                        double seconds = stopwatch.GetElapsedTime().TotalSeconds;
+                        Debug.WriteLine(seconds);
+                        Debug.WriteLine(String.Format("IsConnectable {0} - IsConnected {1}", bleDeviceDisplay.IsConnectable.ToString(), bleDeviceDisplay.IsConnected.ToString()));
+
+                        //if (bleDeviceDisplay.IsConnectable &&  !bleDeviceDisplay.IsConnected || !bleDeviceDisplay.IsConnectable && bleDeviceDisplay.IsConnected) {
+                        if (seconds > 10) { 
+                            bleDeviceDisplay.Update(deviceInfoUpdate);
+                            stopwatch = ValueStopwatch.StartNew();
+                            UpdateDevices();
+                            return;
+                        }
+
                     }
                     // Update the device list
 
