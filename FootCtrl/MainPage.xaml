@@ -25,8 +25,8 @@
         <TextBlock x:Name="StatusLabel1" Margin="120,55,0,10" TextWrapping="Wrap" Text="Input:" />
         <TextBlock x:Name="StatusLabel2" Margin="410,55,0,10" TextWrapping="Wrap" Text="Output:" />
 
-        <ListBox x:Name="midiInPortListBox"  Height="200" Width="290" Margin="5,80,0,0" IsEnabled="False" RequestedTheme="Dark"/>
-        <ListBox x:Name="midiOutPortListBox"  Height="200" Width="290" Margin="300,80,0,0" IsEnabled="False" RequestedTheme="Dark" />
+        <ListBox x:Name="midiInPortListBox"  Height="200" Width="390" Margin="5,80,0,0" IsEnabled="False" RequestedTheme="Dark"/>
+        <ListBox x:Name="midiOutPortListBox"  Height="200" Width="190" Margin="400,80,0,0" IsEnabled="False" RequestedTheme="Dark" />
         
 
         <Button x:Name="Rescan" Content="Rescan" Margin="220,300,0,0" VerticalAlignment="Top" Height="73" Width="134" Click="Rescan_Click"/>

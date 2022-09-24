@@ -44,7 +44,7 @@
 			<desktop:Extension  Category=windows.fullTrusProcess="" Execytable="win32\SysstrayComponent.exe" />
 		</Extensions>-->
       <uap:VisualElements
-        DisplayName="FootCtrl 1.0.4"
+        DisplayName="FootCtrl 1.0.5"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="FootCtrl"

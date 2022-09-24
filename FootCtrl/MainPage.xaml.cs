@@ -13,7 +13,6 @@ using System.Text;
 using Windows.Storage.Streams;
 using Windows.UI.ViewManagement;
 using Windows.ApplicationModel.ExtendedExecution;
-using System.Threading;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.VisualBasic;
@@ -107,6 +106,7 @@ namespace FootCtrl
         MidiInPort midiInPort1;
         MidiInPort midiInPort2;
         MidiInPort midiInPort3;
+        MidiInPort midiInPort4;
 
         bool enumerationCompleted = false;
         CoreDispatcher coreDispatcher = null;
@@ -174,7 +174,10 @@ namespace FootCtrl
                 }
                 else
                 {
-                    this.midiInPortListBox.Items.Add(deviceInfo.Name);
+                    String devName = "Footctrl: "  + Between(deviceInfo.Id, "MIDII_", "#{");
+                    this.midiInPortListBox.Items.Add(devName);
+
+
                     midiInPort1.MessageReceived += MidiInPort_MessageReceived;
                     Debug.WriteLine("midiInPort1 Connected");
 
@@ -202,7 +205,9 @@ namespace FootCtrl
                 }
                 else
                 {
-                    this.midiInPortListBox.Items.Add(deviceInfo.Name);
+                    String devName = "Footctrl: " + Between(deviceInfo.Id, "MIDII_", "#{");
+                    this.midiInPortListBox.Items.Add(devName);
+
                     midiInPort2.MessageReceived += MidiInPort_MessageReceived;
                     Debug.WriteLine("midiInPort2 Connected");
 
@@ -229,7 +234,9 @@ namespace FootCtrl
                 }
                 else
                 {
-                    this.midiInPortListBox.Items.Add(deviceInfo.Name);
+                    String devName = "Footctrl: " + Between(deviceInfo.Id, "MIDII_", "#{");
+                    this.midiInPortListBox.Items.Add(devName);
+                    
                     midiInPort3.MessageReceived += MidiInPort_MessageReceived;
                     Debug.WriteLine("midiInPort3 Connected");
 
@@ -241,6 +248,57 @@ namespace FootCtrl
             }
         }
 
+
+        private async Task ConnectFoot4(DeviceInformation deviceInfo)
+        {
+            Debug.WriteLine("Connecting  midiInPort3 ...");
+
+            try
+            {
+
+                midiInPort4 = await MidiInPort.FromIdAsync(deviceInfo.Id);
+                if (midiInPort4 == null)
+                {
+                    Debug.WriteLine("Unable to create MidiInPort from input device");
+
+                }
+                else
+                {
+                    String devName = "Footctrl: " + Between(deviceInfo.Id, "MIDII_", "#{");
+                    this.midiInPortListBox.Items.Add(devName);
+                    
+                    midiInPort4.MessageReceived += MidiInPort_MessageReceived;
+                    Debug.WriteLine("midiInPort4 Connected");
+
+                }
+            }
+            catch
+            {
+                Debug.WriteLine("Execpion on midiInPort4");
+            }
+        }
+
+        private String Between(String value, String a, String b)
+        {
+            int posA = value.IndexOf(a);
+            int posB = value.LastIndexOf(b);
+            if (posA == -1)
+            {
+                return "";
+            }
+            if (posB == -1)
+            {
+                return "";
+            }
+            int adjustedPosA = posA + a.Length;
+            if (adjustedPosA >= posB)
+            {
+                return "";
+            }
+            return value.Substring(adjustedPosA, posB - adjustedPosA);
+        }
+
+
         private async Task EnumerateMidiInputDevices()
         {
 
@@ -249,6 +307,7 @@ namespace FootCtrl
             if (midiInPort1 != null) midiInPort1.Dispose();
             if (midiInPort2 != null) midiInPort2.Dispose();
             if (midiInPort3 != null) midiInPort3.Dispose();
+            if (midiInPort4 != null) midiInPort4.Dispose();
 
 
             // Find all input MIDI devices
@@ -319,6 +378,22 @@ namespace FootCtrl
                         {
                             //Debug.WriteLine("Execpion on midiInPort2");
                             Debug.WriteLine("Execpion on midiInPort3");
+
+                        }
+                    }
+
+
+                    if (devNumber == 4)
+                    {
+                        try
+                        {
+                            ConnectFoot4(deviceInfo);
+                        }
+
+                        catch
+                        {
+                            //Debug.WriteLine("Execpion on midiInPort2");
+                            Debug.WriteLine("Execpion on midiInPort4");
 
                         }
                     }
@@ -446,7 +521,10 @@ namespace FootCtrl
 
 
             string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable" };
-            string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+ 
+            
+            //string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+            string aqsAllBluetoothLEDevices = "System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\" AND (System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True \r\n  OR System.Devices.Aep.Bluetooth.IssueInquiry:=System.StructuredQueryType.Boolean#False) ";
 
 
             midiInDeviceWatcher =
