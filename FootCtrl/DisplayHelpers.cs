@@ -89,6 +89,9 @@ namespace FootCtrl
         public string Id => DeviceInformation.Id;
         public string Name => DeviceInformation.Name;
         public bool IsPaired => DeviceInformation.Pairing.IsPaired;
+
+        public string ContainerId => (string) DeviceInformation.Properties["System.Devices.Aep.ContainerId"];
+
         public bool IsConnected => (bool?)DeviceInformation.Properties["System.Devices.Aep.IsConnected"] == true;
         public bool IsConnectable => (bool?)DeviceInformation.Properties["System.Devices.Aep.Bluetooth.Le.IsConnectable"] == true;
 
@@ -109,12 +112,14 @@ namespace FootCtrl
             OnPropertyChanged("IsConnected");
             OnPropertyChanged("Properties");
             OnPropertyChanged("IsConnectable");
+            OnPropertyChanged("ContainerId");
 
-            UpdateGlyphBitmapImage();
+            //UpdateGlyphBitmapImage();
         }
 
         private async void UpdateGlyphBitmapImage()
         {
+            return;
             DeviceThumbnail deviceThumbnail = await DeviceInformation.GetGlyphThumbnailAsync();
             var glyphBitmapImage = new BitmapImage();
             await glyphBitmapImage.SetSourceAsync(deviceThumbnail);
@@ -126,6 +131,10 @@ namespace FootCtrl
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+
+
+
     }
 
     /// <summary>

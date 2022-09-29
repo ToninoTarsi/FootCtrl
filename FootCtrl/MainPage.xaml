@@ -30,5 +30,6 @@
         
 
         <Button x:Name="Rescan" Content="Rescan" Margin="220,300,0,0" VerticalAlignment="Top" Height="73" Width="134" Click="Rescan_Click"/>
+        <CheckBox Content="Battery Level"  x:Name="Battery_Level" Margin="5,300,0,0" IsChecked="True"/>
     </RelativePanel>
 </Page>
