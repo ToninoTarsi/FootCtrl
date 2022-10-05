@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using Windows.Devices.PointOfService;
 using Windows.Devices.Power;
 using System.Security.Cryptography;
+using Windows.ApplicationModel;
 
 
 
@@ -458,7 +459,14 @@ namespace FootCtrl
             UpdateStatus("Done",NotifyType.Green);
 
         }
+        public static string GetAppVersion()
+        {
+            Package package = Package.Current;
+            PackageId packageId = package.Id;
+            PackageVersion version = packageId.Version;
 
+            return string.Format("ver = {0}.{1}.{2}", version.Major, version.Minor, version.Build);
+        }
 
         public async Task GetAllBatteyLevels()
         {
@@ -560,6 +568,8 @@ namespace FootCtrl
             DeviceNames = new String[maxPort];
 
             this.InitializeComponent();
+
+            txtVersion.Text = GetAppVersion();
 
             KnownDevices.Clear();
 
