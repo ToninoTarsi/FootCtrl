@@ -26,6 +26,7 @@ using Windows.Devices.PointOfService;
 using Windows.Devices.Power;
 using System.Security.Cryptography;
 using Windows.ApplicationModel;
+using Windows.Storage;
 
 
 
@@ -68,8 +69,9 @@ namespace FootCtrl
             public TimeSpan GetElapsedTime() => GetElapsedTime(_startTimestamp, GetTimestamp());
         }
 
+        bool bbBattery_Level = false;
 
-        
+
 
 
         MidiInPort[] midiInPort;
@@ -93,6 +95,15 @@ namespace FootCtrl
 
         IMidiOutPort midiOutPort;
         public static TeVirtualMIDI port;
+
+        DeviceWatcher pairedBTDeviceWatcher = null;
+
+
+        string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable" };
+
+
+        //string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+        string aqsAllBluetoothLEDevices = "System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\" AND (System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True \r\n  OR System.Devices.Aep.Bluetooth.IssueInquiry:=System.StructuredQueryType.Boolean#False) ";
 
 
 
@@ -488,7 +499,7 @@ namespace FootCtrl
             
             UpdateStatus("Scanning input devices ...", NotifyType.Red);
 
-            bool bbBattery_Level = (bool) Battery_Level.IsChecked;
+             bbBattery_Level = (bool) Battery_Level.IsChecked;
 
 
 
@@ -559,6 +570,15 @@ namespace FootCtrl
 
         public  MainPage()
         {
+
+           // 
+
+
+
+            // load a composite setting
+
+
+
             const int maxPort = 4;
 
             midiInPort = new MidiInPort[maxPort];
@@ -578,14 +598,7 @@ namespace FootCtrl
 
             BeginExtendedExecution();
 
-            DeviceWatcher pairedBTDeviceWatcher = null;
 
-
-            string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable" };
- 
-            
-            //string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
-            string aqsAllBluetoothLEDevices = "System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\" AND (System.Devices.Aep.IsPaired:=System.StructuredQueryType.Boolean#True \r\n  OR System.Devices.Aep.Bluetooth.IssueInquiry:=System.StructuredQueryType.Boolean#False) ";
 
 
             pairedBTDeviceWatcher =
@@ -604,23 +617,17 @@ namespace FootCtrl
 
 
             EnumerateMidiOutputDevices();
-    
-            //RescanMidiInPorts();
-
-                //int devN = MidiDeviceNumberFromBTDevice(deviceInfoUpdate);
-                //Debug.WriteLine(String.Format("Updated {0}{1}", deviceInfoUpdate.Id, devN));
-            
-
-            //RescanPorts();
 
 
-            //inputDeviceWatcher =   new MyMidiDeviceWatcher(MidiInPort.GetDeviceSelector(), midiInPortListBox, Dispatcher);
+            ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
 
-            //inputDeviceWatcher.StartWatcher();
-
-            //outputDeviceWatcher = new MyMidiDeviceWatcher(MidiOutPort.GetDeviceSelector(), midiOutPortListBox, Dispatcher);
-
-            //outputDeviceWatcher.StartWatcher();
+            // load a setting that is local to the device   
+            String localValue = localSettings.Values["Battery"] as string;
+            if (localValue != null)
+            {
+                if (localValue == "0") Battery_Level.IsChecked = false;
+                else Battery_Level.IsChecked = true;
+            }
 
 
         }
@@ -747,6 +754,8 @@ namespace FootCtrl
 
         private void Rescan_Click(object sender, RoutedEventArgs e)
         {
+
+
             RescanMidiInPorts();
         }
 
@@ -927,6 +936,33 @@ namespace FootCtrl
                 }
             }
             return null;
+        }
+
+        private void Battery_Level_Checked(object sender, RoutedEventArgs e)
+        {
+            ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
+
+            if (Battery_Level.IsChecked == true) 
+                localSettings.Values["Battery"] = "1";
+            else
+                localSettings.Values["Battery"] = "0";
+
+            RescanMidiInPorts();
+
+        }
+
+        private void Battery_Level_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
+
+            if (Battery_Level.IsChecked == true)
+                localSettings.Values["Battery"] = "1";
+            else
+                localSettings.Values["Battery"] = "0";
+
+
+            RescanMidiInPorts();
+
         }
 
 
